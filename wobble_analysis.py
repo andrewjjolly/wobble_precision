@@ -60,7 +60,7 @@ def plot_rvs(times, rvs, rvs_err, star_name):
     gradient, intercept, gradient_err, intercept_err = linear_trend(times, rvs, rvs_err)
     plt.figure()
     plt.errorbar(times, rvs, rvs_err, fmt='.k')
-    plt.plot(times, straight_line(times, gradient, intercept))
+    plt.plot(times, straight_line(times, gradient, intercept))w
     plt.title('Combined Orders for {}'.format(star_name))
     plt.ylabel('Radial Velocity [ms$^{-1}$]')
     plt.xlabel('MJD')
@@ -69,6 +69,14 @@ def detrend_rvs(times, rvs, rvs_err):
     gradient, intercept, gradient_err, intercept_err = linear_fit(times, rvs, rvs_err)
     detrended_rvs = [rvs[i] - (straight_line(times, gradient, intercept))[i] for i in range(0, len(times))]
     return detrended_rvs
+
+def create_rvs_err_array(results, no_of_orders):
+    rvs_errs_all_orders = []
+    for order in range(no_of_orders):
+        order_rvs_err = np.array(results['RV_order{}_err'.format(order)])
+        rvs_errs_all_orders.append(order_rvs_err)
+    rvs_errs_all_orders = np.array(rvs_errs_all_orders)
+    return rvs_errs_all_orders
 
 
 
