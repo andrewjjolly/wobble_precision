@@ -14,6 +14,8 @@ from astropy.modeling import models, fitting
 from astropy.timeseries import LombScargle
 from scipy.optimize import curve_fit
 
+#%%
+
 """
 FUNCTIONS
 """
@@ -77,6 +79,13 @@ def create_rvs_err_array(results, no_of_orders):
         rvs_errs_all_orders.append(order_rvs_err)
     rvs_errs_all_orders = np.array(rvs_errs_all_orders)
     return rvs_errs_all_orders
+
+def nan_to_inf(rvs_err_array):
+    nan_boolean = np.isnan(rvs_err_array) #creating a boolean mask for the location of the nans in the array
+    rvs_err_array[nan_boolean] = np.inf #using the mask to turn the nans into infs
+    return rvs_err_array
+
+#%%
 
 
 
