@@ -70,7 +70,7 @@ def plot_rvs(times, rvs, rvs_err, star_name):
 def detrend_rvs(times, rvs, rvs_err):
     gradient, intercept, gradient_err, intercept_err = linear_fit(times, rvs, rvs_err)
     detrended_rvs = [rvs[i] - (straight_line(times, gradient, intercept))[i] for i in range(0, len(times))]
-    return detrended_rvs
+    return detrended_rvs, gradient, gradient_err
 
 def create_rvs_err_array(results, no_of_orders):
     rvs_errs_all_orders = []
@@ -78,7 +78,7 @@ def create_rvs_err_array(results, no_of_orders):
         order_rvs_err = np.array(results['RV_order{}_err'.format(order)])
         rvs_errs_all_orders.append(order_rvs_err)
     rvs_errs_all_orders = np.array(rvs_errs_all_orders)
-    return rvs_errs_all_orders
+    return rvs_err_all_orders
 
 def nan_to_inf(rvs_err_array):
     nan_boolean = np.isnan(rvs_err_array) #creating a boolean mask for the location of the nans in the array
@@ -91,7 +91,15 @@ def plot_nan_locations(nan_boolean):
     plt.title('Location of NaN in RV errors')
     plt.xlabel('Epoch')
     plt.ylabel('Order')  
-    plt.ylim(0,no_of_orders) 
+    plt.ylim(0,no_of_orders)
+
+def create_rvs_array(results, no_of_orders):
+    rvs_all_orders = []
+    for order in range(no_of_orders):
+        order_rvs = np.array(results['RV_order{}'.format(order)])
+        rvs_all_orders.append(order_rvs)
+    rvs_all_orders = np.array(rvs_all_orders)
+    return rvs_all_orders
 
 #%%
 
