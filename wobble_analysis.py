@@ -62,7 +62,7 @@ def plot_rvs(times, rvs, rvs_err, star_name):
     gradient, intercept, gradient_err, intercept_err = linear_trend(times, rvs, rvs_err)
     plt.figure()
     plt.errorbar(times, rvs, rvs_err, fmt='.k')
-    plt.plot(times, straight_line(times, gradient, intercept))w
+    plt.plot(times, straight_line(times, gradient, intercept))
     plt.title('Combined Orders for {}'.format(star_name))
     plt.ylabel('Radial Velocity [ms$^{-1}$]')
     plt.xlabel('MJD')
@@ -102,9 +102,6 @@ def create_rvs_array(results, no_of_orders):
     return rvs_all_orders
 
 #%%
-
-
-
 data_dir = '/home/z5345592/projects/gl667c_wobble/results'
 star_name = 'GL667C'
 
@@ -115,8 +112,32 @@ for lr in rv_lr_list:
     txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
     hdf5_results_filename = data_dir + 'results_no_bad_orders_lr{}.hdf5'.format(lr)
 
-    load_results(txt_results_filename, hdf5_results_filename)
+    results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
 
     times = np.array(results['dates'])
     combined_order_rvs = np.array(results['RV'])
     combined_order_rvs_err = np.array(results['RV_err'])
+
+"""
+planned structure of code:
+
+assign directory for data
+assign star_name
+list of learning rates I have results for
+loop over the learning rates:
+
+    load in results
+    assign rvs, rvs_err for combined & order by order
+    replace rvs_err nans with infs
+    normalise
+    detrend
+    remove 7d, 28d signals
+    calculate lsp snr for each order for each planet and save
+
+out of the loop:
+
+save the learning rate performance plot & results
+
+
+
+"""
