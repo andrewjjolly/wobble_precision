@@ -83,7 +83,15 @@ def create_rvs_err_array(results, no_of_orders):
 def nan_to_inf(rvs_err_array):
     nan_boolean = np.isnan(rvs_err_array) #creating a boolean mask for the location of the nans in the array
     rvs_err_array[nan_boolean] = np.inf #using the mask to turn the nans into infs
-    return rvs_err_array
+    return rvs_err_array, nan_boolean
+
+def plot_nan_locations(nan_boolean):
+    plt.figure()
+    plt.imshow(nan_boolean, cmap='gray_r')
+    plt.title('Location of NaN in RV errors')
+    plt.xlabel('Epoch')
+    plt.ylabel('Order')  
+    plt.ylim(0,no_of_orders) 
 
 #%%
 
