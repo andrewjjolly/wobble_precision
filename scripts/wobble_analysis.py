@@ -29,7 +29,7 @@ def load_results(results_txt, results_hdf5):
     return results, results_hdf5
 
 def straight_line (x, m, c):
-    
+
     return (m * x) + c
 
 def find_nearest(array, value):
@@ -121,13 +121,23 @@ def detrend_order_rvs(times, rvs_array, rvs_err_array, no_of_orders, trend, tren
         order_trend_err = np.sqrt(np.diag(trend_cov))
         detrended_rvs_all_orders.append(order_rvs_detrended)
         residual_trends.append(order_trend[0])
-        residual_trends_err.append(order_trend_err)
+        residual_trends_err.append(order_trend_err[0])
     detrended_rvs_all_orders = np.array(detrended_rvs_all_orders)
     residual_trends = np.array(residual_trends)
     residual_trends_err = np.array(residual_trends_err)
-    print(np.shape(residual_trends))
-
+   
     return detrended_rvs_all_orders, residual_trends, residual_trends_err
+
+def sine_wave(x_data, phase_shift):
+    return lit_amplitude * (np.sin((2 * np.pi) * (x_data + phase_shift)))
+
+def subtract_periodic_signal(period, amplitude, times, rvs, rvs_err):
+    lit_amplitude = amplitude
+    phase_folded = (times / period) % 1
+    popt, pcov = curve_fit(sine_wave, times, rvs, sigma = rvs_err)
+    signal_subtracted = rvs - sine_wave(phase_folded, popt[0])
+
+    return signal_subtracted
 
 #%%
 data_dir = '/home/z5345592/projects/gl667c_wobble/results'
