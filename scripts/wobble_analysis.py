@@ -138,15 +138,17 @@ def subtract_periodic_signal(period, times, rvs, rvs_err):
 
     return signal_subtracted
 
-def lsp_period(times, rvs, rvs_err):
+def lsp_snr_at_period(times, rvs, rvs_err):
     frequency, power = LombScargle(times, rvs, rvs_err).autopower() #assigning the frequency and power from the lsp
     period = 1 / frequency #turning frequency into period
     noise_b = np.std(power[(period > 6) & (period < 8)])
     noise_c = np.std(power[(period > 28) & (period < 30)])
     snr_b = power / noise_b
-    snr_c = power / noise_c 
-  
-    return period, snr_b, snr_c
+    snr_c = power / noise_c
+    snr_at_b = find_nearest(snr_b, lit_period_b)
+    snr_at_c = find_nearest(snr_c, lit_period_c)
+
+    return snr_at_b, snr_at_c
 
 #%%
 data_dir = '/home/z5345592/projects/gl667c_wobble/results'
