@@ -29,11 +29,13 @@ def load_results(results_txt, results_hdf5):
     return results, results_hdf5
 
 def straight_line (x, m, c):
+    
     return (m * x) + c
 
 def find_nearest(array, value):
     array = np.array(array)
     idx = ((np.abs(array - value)).argmin())
+
     return idx
 
 def plot_rvs(times, rvs, rvs_err, star_name):
@@ -51,10 +53,12 @@ def linear_fit(times, rvs, rvs_err):
     intercept = popt[1]
     gradient_err = perr[0]
     intercept_err = perr[1]
+
     return gradient, intercept, gradient_err, intercept_err
 
 def normalise_rvs(rv_data):
     normalised_rvs = rv_data - np.median(rv_data)
+
     return normalised_rvs
 
 def plot_rvs(times, rvs, rvs_err, star_name):
@@ -70,6 +74,7 @@ def plot_rvs(times, rvs, rvs_err, star_name):
 def detrend_rvs(times, rvs, rvs_err):
     gradient, intercept, gradient_err, intercept_err = linear_fit(times, rvs, rvs_err)
     detrended_rvs = [rvs[i] - (straight_line(times, gradient, intercept))[i] for i in range(0, len(times))]
+
     return detrended_rvs, gradient, gradient_err
 
 def create_rvs_err_array(results, no_of_orders):
@@ -78,11 +83,13 @@ def create_rvs_err_array(results, no_of_orders):
         order_rvs_err = np.array(results['RV_order{}_err'.format(order)])
         rvs_errs_all_orders.append(order_rvs_err)
     rvs_errs_all_orders = np.array(rvs_errs_all_orders)
+
     return rvs_err_all_orders
 
 def nan_to_inf(rvs_err_array):
     nan_boolean = np.isnan(rvs_err_array) #creating a boolean mask for the location of the nans in the array
     rvs_err_array[nan_boolean] = np.inf #using the mask to turn the nans into infs
+
     return rvs_err_array, nan_boolean
 
 def plot_nan_locations(nan_boolean):
@@ -99,7 +106,28 @@ def create_rvs_array(results, no_of_orders):
         order_rvs = np.array(results['RV_order{}'.format(order)])
         rvs_all_orders.append(order_rvs)
     rvs_all_orders = np.array(rvs_all_orders)
+
     return rvs_all_orders
+
+def detrend_order_rvs(times, rvs_array, rvs_err_array, no_of_orders, trend, trend_err):
+    detrended_rvs_all_orders = []
+    residual_trends = []
+    residual_trends_err = []
+    for order in range(no_of_orders):
+        order_rvs = rvs_array[order, :]
+        order_rvs_err = rvs_err_array[order, :]
+        order_rvs_detrended = [order_rvs[i] - (straight_line(times, trend, trend_err))[i] for i in range(0, len(times))]
+        order_trend, trend_cov = curve_fit(straight_line, times, order_rvs_detrended, sigma = order_rvs_err)
+        order_trend_err = np.sqrt(np.diag(trend_cov))
+        detrended_rvs_all_orders.append(order_rvs_detrended)
+        residual_trends.append(order_trend[0])
+        residual_trends_err.append(order_trend_err)
+    detrended_rvs_all_orders = np.array(detrended_rvs_all_orders)
+    residual_trends = np.array(residual_trends)
+    residual_trends_err = np.array(residual_trends_err)
+    print(np.shape(residual_trends))
+
+    return detrended_rvs_all_orders, residual_trends, residual_trends_err
 
 #%%
 data_dir = '/home/z5345592/projects/gl667c_wobble/results'
