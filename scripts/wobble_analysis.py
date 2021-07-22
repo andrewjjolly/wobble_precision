@@ -128,14 +128,13 @@ def detrend_order_rvs(times, rvs_array, rvs_err_array, no_of_orders, trend, tren
    
     return detrended_rvs_all_orders, residual_trends, residual_trends_err
 
-def sine_wave(x_data, phase_shift):
-    return lit_amplitude * (np.sin((2 * np.pi) * (x_data + phase_shift)))
+def sine_wave(x_data, amplitude, phase_shift):
+    return amplitude * (np.sin((2 * np.pi) * (x_data + phase_shift)))
 
-def subtract_periodic_signal(period, amplitude, times, rvs, rvs_err):
-    lit_amplitude = amplitude
+def subtract_periodic_signal(period, times, rvs, rvs_err):
     phase_folded = (times / period) % 1
-    popt, pcov = curve_fit(sine_wave, times, rvs, sigma = rvs_err)
-    signal_subtracted = rvs - sine_wave(phase_folded, popt[0])
+    popt, pcov = curve_fit(sine_wave, phase_folded, rvs, sigma = rvs_err)
+    signal_subtracted = rvs - sine_wave(phase_folded, popt[0], popt[1])
 
     return signal_subtracted
 
