@@ -174,8 +174,23 @@ def load_data(data_filename, good_epochs, bad_orders):
 
     return data
 
+def count_orders(data):
+    
+    no_of_orders = len(data.orders)
+
+    return no_of_orders
+
+def create_combined_orders(results):
+    combined_order_rvs = np.array(results['RV'])
+    combined_order_rvs = normalise_rvs(combined_order_rvs)
+    combined_order_rvs_err = np.array(results['RV_err'])
+
+    return combined_order_rvs, combined_order_rvs_err
+
 #%%
 data_dir = '/home/z5345592/projects/gl667c_wobble/results/'
+data_filename = '/home/z5345592/projects/gl667c_wobble/data/gl667c.hdf5'
+
 star_name = 'GL667C'
 
 lit_period_b = 7.2
@@ -210,6 +225,14 @@ bad_orders = np.array([False, False, False, False, False, False, False, False, F
        False, False, False,  True, False, False, False, False, False,
        False,  True,  True, False, False,  True,  True,  True,  True])
 
+data = load_data(data_filename, good_epochs, bad_orders)
+
+no_of_orders = count_orders(data)
+
+wavelengths, wavelengths_err = assign_wavelengths(data, no_of_orders)
+
+times = np.array(data.dates)
+
  for lr in rv_lr_list:
     
     txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
@@ -217,7 +240,7 @@ bad_orders = np.array([False, False, False, False, False, False, False, False, F
 
     results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
 
-    times = np.array(results['dates'])
+    
 
 
 
