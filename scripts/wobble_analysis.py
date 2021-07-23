@@ -166,6 +166,14 @@ def assign_wavelengths(data, no_of_orders):
 
     return wavelengths, wavelengths_err
 
+def load_data(data_filename, good_epochs, bad_orders):
+    data = wobble.Data(filename=data_filename, epochs=good_epochs)
+    data.delete_orders(bad_orders) #deletes the bad orders that have been identified in the 'bad orders' list above.
+    data.drop_bad_orders(min_snr=3) #dropping bad orders
+    data.drop_bad_epochs(min_snr=3) #dropping bad epochs
+
+    return data
+
 #%%
 data_dir = '/home/z5345592/projects/gl667c_wobble/results/'
 star_name = 'GL667C'
@@ -210,6 +218,8 @@ bad_orders = np.array([False, False, False, False, False, False, False, False, F
     results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
 
     times = np.array(results['dates'])
+
+
 
 
 """
