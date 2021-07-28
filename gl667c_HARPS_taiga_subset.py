@@ -51,7 +51,7 @@ import time
 # data.write('/home/z5345592/projects/gl667c_wobble/data/gl667c.hdf5')
 
 #%%
-orders_subset = range(30,42) use these if you just want to use a few orders / epochs for testing then slice in wobble.Data
+orders_subset = range(30,42) #use these if you just want to use a few orders / epochs for testing then slice in wobble.Data
 epochs_subset = range(0,10)
 
 data = wobble.Data(filename='/home/ajolly/projects/gl667c_wobble/data/gl667c.hdf5', orders = orders_subset, epochs = epochs_subset)

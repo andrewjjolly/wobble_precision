@@ -19,6 +19,7 @@ import exoplanet as xo
 from astropy.modeling import models, fitting
 from astropy.timeseries import LombScargle
 from scipy.optimize import curve_fit
+import matplotlib.cm as cm
 
 #%%
 
@@ -48,7 +49,7 @@ def plot_rvs(times, rvs, rvs_err, star_name):
     rvs = rvs - np.median(rvs)
     plt.figure()
     plt.errorbar(times, rvs, rvs_err, fmt='.k')
-    plt.title('Combined Orders for {}'.format(star_name))
+    plt.title('{}'.format(star_name))
     plt.ylabel('Radial Velocity [ms$^{-1}$]')
     plt.xlabel('MJD')
 
@@ -66,15 +67,6 @@ def normalise_rvs(rv_data):
     normalised_rvs = rv_data - np.median(rv_data)
 
     return normalised_rvs
-
-def plot_rvs(times, rvs, rvs_err, star_name):
-    gradient, intercept, gradient_err, intercept_err = linear_trend(times, rvs, rvs_err)
-    plt.figure()
-    plt.errorbar(times, rvs, rvs_err, fmt='.k')
-    plt.plot(times, straight_line(times, gradient, intercept))
-    plt.title('Combined Orders for {}'.format(star_name))
-    plt.ylabel('Radial Velocity [ms$^{-1}$]')
-    plt.xlabel('MJD')
 
 def detrend_rvs(times, rvs, rvs_err):
     gradient, intercept, gradient_err, intercept_err = linear_fit(times, rvs, rvs_err)
@@ -193,9 +185,7 @@ def create_combined_orders(results):
     combined_order_rvs = normalise_rvs(combined_order_rvs)
     combined_order_rvs_err = np.array(results['RV_err'])
 
-    return combined_order_rvs, combined_order_rvs_err
-
-    
+    return combined_order_rvs, combined_order_rvs_err    
 
 #%%
 data_dir = '/home/z5345592/projects/wobble_precision/data/'
@@ -246,6 +236,9 @@ rv_lr_list = [20, 50, 100, 200, 400, 1000] #list of learning rates that I have r
 snr_at_b_all_lr = []
 snr_at_c_all_lr = []
 
+rvs_planet_b_all_lr = []
+rvs_planet_c_all_lr = []
+
 for lr in rv_lr_list:
     
     txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
@@ -256,7 +249,7 @@ for lr in rv_lr_list:
     combined_order_rvs, combined_order_rvs_err = create_combined_orders(results)
     
     rvs_all_orders = create_rvs_array(results, no_of_orders)
-    rvs_all_orders = normalise_rvs(rvs_all_orders) #this is what isn't correct - need to loop through
+    rvs_all_orders = normalise_rvs(rvs_all_orders)
     rvs_all_orders_err = create_rvs_err_array(results, no_of_orders)
 
     rvs_all_orders_err, rvs_err_nans = nan_to_inf(rvs_all_orders_err)
@@ -278,6 +271,8 @@ for lr in rv_lr_list:
         snr_at_b_no_b, snr_at_c_no_b = lsp_snr_at_period(times, rvs_planet_b_removed, rvs_all_orders_err[order,:])
         snr_at_b_all_orders.append(snr_at_b_no_c)
         snr_at_c_all_orders.append(snr_at_c_no_b)
+        rvs_planet_b.append(rvs_planet_c_removed)
+        rvs_planet_c.append(rvs_planet_b_removed)
 
     snr_at_b_all_orders = np.array(snr_at_b_all_orders)
     snr_at_c_all_orders = np.array(snr_at_c_all_orders)
@@ -288,9 +283,12 @@ for lr in rv_lr_list:
 snr_at_b_all_lr = np.array(snr_at_b_all_lr)
 snr_at_c_all_lr = np.array(snr_at_c_all_lr)
 
+colours = cm.get_cmap('magma')
+colours = colours(np.linspace(0,1,6))
+
 plt.figure()
 for lr in range(len(rv_lr_list)):
-    plt.scatter(wavelengths, snr_at_b_all_lr[lr,:], label=str(rv_lr_list[lr]))
+    plt.plot(wavelengths, snr_at_b_all_lr[lr,:], label=str(rv_lr_list[lr]), c=colours[lr])
     plt.xlabel('wavelength, nm')
     plt.ylabel('LSP Power / std of LSP period $\pm$ 1 day')
     plt.legend()
@@ -299,10 +297,45 @@ for lr in range(len(rv_lr_list)):
 
 plt.figure()
 for lr in range(len(rv_lr_list)):
-    plt.scatter(wavelengths, snr_at_c_all_lr[lr,:], label=str(rv_lr_list[lr]))
+    plt.plot(wavelengths, snr_at_c_all_lr[lr,:], label=str(rv_lr_list[lr]), c=colours[lr])
     plt.xlabel('wavelength, nm')
     plt.ylabel('LSP Power / std of LSP period $\pm$ 1 day')
     plt.legend()
     plt.title('LR performance GL667Cc')
     plt.yscale('log')
+
+# %%
+"""
+Plotting the RVs for the orders identified
+"""
+
+orders_of_interest = [17,22,41,42,47,51] #identified manually by looking at the plot
+rv_lr_list = [20, 50, 100, 200, 400, 1000]
+
+for lr in rv_lr_list:
+
+    txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
+    hdf5_results_filename = data_dir + 'results_no_bad_orders_lr{}.hdf5'.format(lr)
+    results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
+
+    rvs_all_orders = create_rvs_array(results, no_of_orders)
+    rvs_all_orders = normalise_rvs(rvs_all_orders)
+
+    rvs_all_orders_err = create_rvs_err_array(results, no_of_orders)
+    rvs_all_orders_err, rvs_err_nans = nan_to_inf(rvs_all_orders_err)
+
+    for order in orders_of_interest:
+        order_rvs_b = subtract_periodic_signal(lit_period_c, times, rvs_all_orders[order,:], rvs_all_orders_err[order,:])
+        plt.figure()
+        plot_rvs(times, order_rvs_b, rvs_all_orders_err[order, :], 'RV for order {} and LR={}'.format(order, lr))
+        frequency, power = LombScargle(times, order_rvs_b, rvs_all_orders_err[order,:]).autopower() #assigning the frequency and power from the lsp
+        period = 1 / frequency #turning frequency into period
+        noise_b = np.std(power[(period > (lit_period_b-0.1*lit_period_b)) & (period < (lit_period_b + 0.1*lit_period_b))])
+        snr_b = power / noise_b
+        snr_at_b = snr_b[find_nearest(power, lit_period_b)]
+        plt.figure()
+        plt.plot(period, snr_b)
+        plt.title('Periodogram for order {} and LR={}'.format(order, lr))
+        plt.xlim(5,10)
+
 # %%
