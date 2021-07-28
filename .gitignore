@@ -1,0 +1,9 @@
+#ignore data, plots, results directories
+
+data/
+plots/
+results/
+
+#ignore any .hdf5 file size due to file size
+
+*.hdf5

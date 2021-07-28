@@ -1,8 +1,14 @@
+#%%
+"""
+PACKAGE IMPORTS
+"""
+
 from datetime import time
 import numpy as np
 from numpy.core.defchararray import upper
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import pymc3 as pm
 import pymc3_ext as pmx
 import aesara_theano_fallback.tensor as tt
@@ -62,7 +68,6 @@ def normalise_rvs(rv_data):
     return normalised_rvs
 
 def plot_rvs(times, rvs, rvs_err, star_name):
-    rvs = normalise_rvs(rvs)
     gradient, intercept, gradient_err, intercept_err = linear_trend(times, rvs, rvs_err)
     plt.figure()
     plt.errorbar(times, rvs, rvs_err, fmt='.k')
@@ -84,7 +89,7 @@ def create_rvs_err_array(results, no_of_orders):
         rvs_errs_all_orders.append(order_rvs_err)
     rvs_errs_all_orders = np.array(rvs_errs_all_orders)
 
-    return rvs_err_all_orders
+    return rvs_errs_all_orders
 
 def nan_to_inf(rvs_err_array):
     nan_boolean = np.isnan(rvs_err_array) #creating a boolean mask for the location of the nans in the array
@@ -109,6 +114,8 @@ def create_rvs_array(results, no_of_orders):
 
     return rvs_all_orders
 
+#detrend_order_rvs has an error where it is shifting the RVS way down in radial velocity, this might be causeing my problem.
+
 def detrend_order_rvs(times, rvs_array, rvs_err_array, no_of_orders, trend, trend_err):
     detrended_rvs_all_orders = []
     residual_trends = []
@@ -119,6 +126,7 @@ def detrend_order_rvs(times, rvs_array, rvs_err_array, no_of_orders, trend, tren
         order_rvs_detrended = [order_rvs[i] - (straight_line(times, trend, trend_err))[i] for i in range(0, len(times))]
         order_trend, trend_cov = curve_fit(straight_line, times, order_rvs_detrended, sigma = order_rvs_err)
         order_trend_err = np.sqrt(np.diag(trend_cov))
+        order_rvs_detrended = normalise_rvs(order_rvs_detrended) #added this in to see if it fixes things.
         detrended_rvs_all_orders.append(order_rvs_detrended)
         residual_trends.append(order_trend[0])
         residual_trends_err.append(order_trend_err[0])
@@ -141,12 +149,12 @@ def subtract_periodic_signal(period, times, rvs, rvs_err):
 def lsp_snr_at_period(times, rvs, rvs_err):
     frequency, power = LombScargle(times, rvs, rvs_err).autopower() #assigning the frequency and power from the lsp
     period = 1 / frequency #turning frequency into period
-    noise_b = np.std(power[(period > 6) & (period < 8)])
-    noise_c = np.std(power[(period > 28) & (period < 30)])
+    noise_b = np.std(power[(period > (lit_period_b-0.5*lit_period_b)) & (period < (lit_period_b + 0.5*lit_period_b))])
+    noise_c = np.std(power[(period > (lit_period_c-0.5*lit_period_c)) & (period < (lit_period_c + 0.5*lit_period_c))])
     snr_b = power / noise_b
     snr_c = power / noise_c
-    snr_at_b = find_nearest(snr_b, lit_period_b)
-    snr_at_c = find_nearest(snr_c, lit_period_c)
+    snr_at_b = snr_b[find_nearest(power, lit_period_b)]
+    snr_at_c = snr_c[find_nearest(power, lit_period_c)]
 
     return snr_at_b, snr_at_c
 
@@ -187,9 +195,11 @@ def create_combined_orders(results):
 
     return combined_order_rvs, combined_order_rvs_err
 
+    
+
 #%%
-data_dir = '/home/z5345592/projects/gl667c_wobble/results/'
-data_filename = '/home/z5345592/projects/gl667c_wobble/data/gl667c.hdf5'
+data_dir = '/home/z5345592/projects/wobble_precision/data/'
+data_filename = '/home/z5345592/projects/wobble_precision/data/gl667c.hdf5'
 
 star_name = 'GL667C'
 
@@ -198,8 +208,6 @@ lit_period_c = 28.1
 
 lit_amplitude_b = 3.9
 lit_amplitude_c = 1.7
-
-rv_lr_list = [20,50,100,200,400,1000] #list of learning rates that I have results for
 
 good_epochs = [ 0,  1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
          13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,
@@ -233,36 +241,68 @@ wavelengths, wavelengths_err = assign_wavelengths(data, no_of_orders)
 
 times = np.array(data.dates)
 
- for lr in rv_lr_list:
+rv_lr_list = [20, 50, 100, 200, 400, 1000] #list of learning rates that I have results for
+
+snr_at_b_all_lr = []
+snr_at_c_all_lr = []
+
+for lr in rv_lr_list:
     
     txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
     hdf5_results_filename = data_dir + 'results_no_bad_orders_lr{}.hdf5'.format(lr)
 
     results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
 
+    combined_order_rvs, combined_order_rvs_err = create_combined_orders(results)
     
+    rvs_all_orders = create_rvs_array(results, no_of_orders)
+    rvs_all_orders = normalise_rvs(rvs_all_orders) #this is what isn't correct - need to loop through
+    rvs_all_orders_err = create_rvs_err_array(results, no_of_orders)
 
+    rvs_all_orders_err, rvs_err_nans = nan_to_inf(rvs_all_orders_err)
 
+    detrended_rvs_combined, combined_rvs_trend, combined_rvs_trend_err = detrend_rvs(times, combined_order_rvs, combined_order_rvs_err)
 
+    detrended_rvs_all_orders, residual_trends, residual_trends_err = detrend_order_rvs(times, rvs_all_orders, rvs_all_orders_err, no_of_orders, combined_rvs_trend, combined_rvs_trend_err)
 
-"""
-planned structure of code:
+    rvs_planet_b_removed = subtract_periodic_signal(lit_period_b, times, detrended_rvs_combined, combined_order_rvs_err)
+    rvs_planet_c_removed = subtract_periodic_signal(lit_period_c, times, detrended_rvs_combined, combined_order_rvs_err)
 
-assign directory for data
-assign star_name
-list of learning rates I have results for
-loop over the learning rates:
+    snr_at_b_all_orders = []
+    snr_at_c_all_orders = []
 
-    load in results
-    assign rvs, rvs_err for combined & order by order
-    replace rvs_err nans with infs
-    normalise
-    detrend
-    remove 7d, 28d signals
-    calculate lsp snr for each order for each planet and save
+    for order in range(no_of_orders):
+        rvs_planet_b_removed = subtract_periodic_signal(lit_period_b, times, detrended_rvs_all_orders[order,:], rvs_all_orders_err[order,:])
+        rvs_planet_c_removed = subtract_periodic_signal(lit_period_c, times, detrended_rvs_all_orders[order,:], rvs_all_orders_err[order,:])
+        snr_at_b_no_c, snr_at_c_no_c = lsp_snr_at_period(times, rvs_planet_c_removed, rvs_all_orders_err[order,:])
+        snr_at_b_no_b, snr_at_c_no_b = lsp_snr_at_period(times, rvs_planet_b_removed, rvs_all_orders_err[order,:])
+        snr_at_b_all_orders.append(snr_at_b_no_c)
+        snr_at_c_all_orders.append(snr_at_c_no_b)
 
-out of the loop:
+    snr_at_b_all_orders = np.array(snr_at_b_all_orders)
+    snr_at_c_all_orders = np.array(snr_at_c_all_orders)
 
-save the learning rate performance plot & results
+    snr_at_b_all_lr.append(snr_at_b_all_orders)
+    snr_at_c_all_lr.append(snr_at_c_all_orders)
 
-"""
+snr_at_b_all_lr = np.array(snr_at_b_all_lr)
+snr_at_c_all_lr = np.array(snr_at_c_all_lr)
+
+plt.figure()
+for lr in range(len(rv_lr_list)):
+    plt.scatter(wavelengths, snr_at_b_all_lr[lr,:], label=str(rv_lr_list[lr]))
+    plt.xlabel('wavelength, nm')
+    plt.ylabel('LSP Power / std of LSP period $\pm$ 1 day')
+    plt.legend()
+    plt.title('LR performance GL667Cb')
+    plt.yscale('log')
+
+plt.figure()
+for lr in range(len(rv_lr_list)):
+    plt.scatter(wavelengths, snr_at_c_all_lr[lr,:], label=str(rv_lr_list[lr]))
+    plt.xlabel('wavelength, nm')
+    plt.ylabel('LSP Power / std of LSP period $\pm$ 1 day')
+    plt.legend()
+    plt.title('LR performance GL667Cc')
+    plt.yscale('log')
+# %%
