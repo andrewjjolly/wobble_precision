@@ -145,8 +145,8 @@ def lsp_snr_at_period(times, rvs, rvs_err):
     noise_c = np.std(power[(period > (lit_period_c-0.5*lit_period_c)) & (period < (lit_period_c + 0.5*lit_period_c))])
     snr_b = power / noise_b
     snr_c = power / noise_c
-    snr_at_b = snr_b[find_nearest(power, lit_period_b)]
-    snr_at_c = snr_c[find_nearest(power, lit_period_c)]
+    snr_at_b = snr_b[find_nearest(period, lit_period_b)]
+    snr_at_c = snr_c[find_nearest(period, lit_period_c)]
 
     return snr_at_b, snr_at_c
 
@@ -271,8 +271,6 @@ for lr in rv_lr_list:
         snr_at_b_no_b, snr_at_c_no_b = lsp_snr_at_period(times, rvs_planet_b_removed, rvs_all_orders_err[order,:])
         snr_at_b_all_orders.append(snr_at_b_no_c)
         snr_at_c_all_orders.append(snr_at_c_no_b)
-        rvs_planet_b.append(rvs_planet_c_removed)
-        rvs_planet_c.append(rvs_planet_b_removed)
 
     snr_at_b_all_orders = np.array(snr_at_b_all_orders)
     snr_at_c_all_orders = np.array(snr_at_c_all_orders)
@@ -336,6 +334,8 @@ for lr in rv_lr_list:
         plt.figure()
         plt.plot(period, snr_b)
         plt.title('Periodogram for order {} and LR={}'.format(order, lr))
-        plt.xlim(5,10)
+        plt.xlim(6,8)
+        plt.ylim(0,10)
+        plt.axvline(lit_period_b, 'r.')
 
 # %%
