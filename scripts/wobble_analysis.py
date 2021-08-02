@@ -185,7 +185,14 @@ def create_combined_orders(results):
     combined_order_rvs = normalise_rvs(combined_order_rvs)
     combined_order_rvs_err = np.array(results['RV_err'])
 
-    return combined_order_rvs, combined_order_rvs_err    
+    return combined_order_rvs, combined_order_rvs_err
+
+def find_periodic_signal(times, period, rvs, rvs_err):
+
+    phase_folded = (times / lit_period_b) % 1
+    popt, pcov = curve_fit(sine_wave, phase_folded, rvs, sigma = rvs_err)
+
+    return sine_wave(phase_folded, popt[0], popt[1])    
 
 #%%
 data_dir = '/home/z5345592/projects/wobble_precision/data/'
@@ -281,7 +288,7 @@ for lr in rv_lr_list:
 snr_at_b_all_lr = np.array(snr_at_b_all_lr)
 snr_at_c_all_lr = np.array(snr_at_c_all_lr)
 
-colours = cm.get_cmap('magma')
+colours = cm.get_cmap('inferno')
 colours = colours(np.linspace(0,1,6))
 
 plt.figure()
@@ -291,7 +298,7 @@ for lr in range(len(rv_lr_list)):
     plt.ylabel('LSP Power / std of LSP period $\pm$ 1 day')
     plt.legend()
     plt.title('LR performance GL667Cb')
-    plt.yscale('log')
+    # plt.yscale('log')
 
 plt.figure()
 for lr in range(len(rv_lr_list)):
@@ -300,7 +307,7 @@ for lr in range(len(rv_lr_list)):
     plt.ylabel('LSP Power / std of LSP period $\pm$ 1 day')
     plt.legend()
     plt.title('LR performance GL667Cc')
-    plt.yscale('log')
+    # plt.yscale('log')
 
 # %%
 """
@@ -337,5 +344,43 @@ for lr in rv_lr_list:
         plt.xlim(6,8)
         plt.ylim(0,10)
         plt.axvline(lit_period_b, 'r.')
+
+# %%
+colours = cm.get_cmap('inferno')
+colours = colours(np.linspace(0,1,6))
+
+rv_lr_list = [20, 50, 100, 200, 400, 1000]
+
+plt.figure()
+
+for lr in rv_lr_list:
+
+    txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
+    hdf5_results_filename = data_dir + 'results_no_bad_orders_lr{}.hdf5'.format(lr)
+    results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
+
+    rvs_combined_orders, rvs_combined_orders_err = create_combined_orders(results)
+    rvs_combined_orders = normalise_rvs(rvs_combined_orders)
+    rvs_combined_orders, trend_combined_orders, trend_combined_orders_err = detrend_rvs(times, rvs_combined_orders, rvs_combined_orders_err)
+
+    rvs_all_orders = create_rvs_array(results, no_of_orders)
+    rvs_all_orders_err = create_rvs_err_array(results, no_of_orders)
+
+    planet_b_signal = find_periodic_signal(times, lit_period_b, rvs_combined_orders, rvs_combined_orders_err)
+    planet_c_signal = find_periodic_signal(times, lit_period_c, rvs_combined_orders, rvs_combined_orders_err)
+
+    rvs_all_orders_detrended, residual_trends, residual_trends_err = detrend_order_rvs(times, rvs_all_orders, rvs_all_orders_err, no_of_orders, trend_combined_orders, trend_combined_orders_err)
+
+    residual_scatter_lr = []
+
+    for order in range(no_of_orders):
+        rvs_planet_c_removed_order = rvs_all_orders[order,:] - planet_c_signal
+        residual_scatter_order = np.std(rvs_planet_c_removed_order)
+        residual_scatter_lr.append(residual_scatter_order)
+
+    residual_scatter_lr = np.array(residual_scatter_lr)
+    plt.plot(range(no_of_orders), residual_scatter_lr, label = str(lr))
+
+plt.legend()
 
 # %%
