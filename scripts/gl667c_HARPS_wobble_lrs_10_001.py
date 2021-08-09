@@ -40,25 +40,22 @@ good_epochs = [ 0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
         174, 175, 176]
 
 #%%
-#data = wobble.Data(filename='/home/ajolly/projects/gl667c_wobble/data/gl667c.hdf5', epochs=good_epochs) #taiga
-data = wobble.Data(filename='/home/z5345592/projects/wobble_precision/data/gl667c.hdf5', epochs=good_epochs) #laptop for testing
+data = wobble.Data(filename='/home/ajolly/projects/gl667c_wobble/data/gl667c.hdf5', epochs=good_epochs) #taiga
+#data = wobble.Data(filename='/home/z5345592/projects/wobble_precision/data/gl667c.hdf5', epochs=good_epochs) #laptop for testing
 #%%
 data.delete_orders(bad_orders) #deletes the bad orders that have been identified in the 'bad orders' list above. Think of a way to do this beforehand?
 data.drop_bad_orders(min_snr=3) #dropping bad orders
 data.drop_bad_epochs(min_snr=3) #dropping bad epochs
 
 # %%
-results = wobble.Results(data = data)
-
-# %%
-# rv_lrs = [5, 10, 20, 40]
-# tell_temp_lrs = [0.01, 0.1, 1, 10]
-
-rv_lrs = [5]
+rv_lrs = [10]
 tell_temp_lrs = [0.01]
 
 for rv_lr in rv_lrs:
     for tell_lr in tell_temp_lrs:
+
+        results = wobble.Results(data = data)
+
         for r in range(len(data.orders)):
             print('starting order {0} of {1}'.format(r+1, len(data.orders)))
             model = wobble.Model(data, results, r)
@@ -66,8 +63,8 @@ for rv_lr in rv_lrs:
             model.add_telluric('tellurics', variable_bases=2, learning_rate_template = tell_lr)
             wobble.optimize_order(model)
 
-    results.combine_orders('star')
-    results.apply_drifts('star') # instrumental drift corrections
-    results.apply_bervs('star') # barycentric corrections
-    results.write_rvs('star', 'results_rvs_rvlr{}telr{}.txt'.format(rv_lr, tell_lr), all_orders=True) #results txt contains a column for each order
-    results.write('results_rvlr{}telr{}.hdf5'.format(rv_lr, tell_lr))
+        results.combine_orders('star')
+        results.apply_drifts('star') # instrumental drift corrections
+        results.apply_bervs('star') # barycentric corrections
+        results.write_rvs('star', 'results_rvs_rvlr{}telr{}.txt'.format(rv_lr, tell_lr), all_orders=True) #results txt contains a column for each order
+        results.write('results_rvlr{}telr{}.hdf5'.format(rv_lr, tell_lr))
