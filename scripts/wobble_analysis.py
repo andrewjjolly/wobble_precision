@@ -195,8 +195,8 @@ def find_periodic_signal(times, period, rvs, rvs_err):
     return sine_wave(phase_folded, popt[0], popt[1])    
 
 #%%
-data_dir = '/home/z5345592/projects/wobble_precision/data/'
-data_filename = '/home/z5345592/projects/wobble_precision/data/gl667c.hdf5'
+data_dir = '/home/ajolly/projects/gl667c_wobble/data'
+data_filename = '/home/ajolly/projects/gl667c_wobble/data/gl667c.hdf5'
 
 star_name = 'GL667C'
 
@@ -349,38 +349,41 @@ for lr in rv_lr_list:
 colours = cm.get_cmap('inferno')
 colours = colours(np.linspace(0,1,6))
 
-rv_lr_list = [20, 50, 100, 200, 400, 1000]
+rv_lr_list = [5, 10, 20, 40]
+te_lr_list = [0.01, 0.1, 1, 10]
 
 plt.figure()
 
-for lr in rv_lr_list:
+for rv_lr in rv_lr_list:
+    for te_lr in te_lr_list:
 
-    txt_results_filename = data_dir + 'results_rvs_lr{}.txt'.format(lr)
-    hdf5_results_filename = data_dir + 'results_no_bad_orders_lr{}.hdf5'.format(lr)
-    results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
+        txt_results_filename = data_dir + 'results_rvs_rvlr{}telr{}.txt'.format(rv_lr, te_lr)
+        hdf5_results_filename = data_dir + 'results_rvlr{}telr{}.hdf5'.format(rv_lr, te_lr)
+        results, results_hdf5 = load_results(txt_results_filename, hdf5_results_filename)
 
-    rvs_combined_orders, rvs_combined_orders_err = create_combined_orders(results)
-    rvs_combined_orders = normalise_rvs(rvs_combined_orders)
-    rvs_combined_orders, trend_combined_orders, trend_combined_orders_err = detrend_rvs(times, rvs_combined_orders, rvs_combined_orders_err)
+        rvs_combined_orders, rvs_combined_orders_err = create_combined_orders(results)
+        rvs_combined_orders = normalise_rvs(rvs_combined_orders)
+        rvs_combined_orders, trend_combined_orders, trend_combined_orders_err = detrend_rvs(times, rvs_combined_orders, rvs_combined_orders_err)
 
-    rvs_all_orders = create_rvs_array(results, no_of_orders)
-    rvs_all_orders_err = create_rvs_err_array(results, no_of_orders)
+        rvs_all_orders = create_rvs_array(results, no_of_orders)
+        rvs_all_orders_err = create_rvs_err_array(results, no_of_orders)
 
-    planet_b_signal = find_periodic_signal(times, lit_period_b, rvs_combined_orders, rvs_combined_orders_err)
-    planet_c_signal = find_periodic_signal(times, lit_period_c, rvs_combined_orders, rvs_combined_orders_err)
+        planet_b_signal = find_periodic_signal(times, lit_period_b, rvs_combined_orders, rvs_combined_orders_err)
+        planet_c_signal = find_periodic_signal(times, lit_period_c, rvs_combined_orders, rvs_combined_orders_err)
 
-    rvs_all_orders_detrended, residual_trends, residual_trends_err = detrend_order_rvs(times, rvs_all_orders, rvs_all_orders_err, no_of_orders, trend_combined_orders, trend_combined_orders_err)
+        rvs_all_orders_detrended, residual_trends, residual_trends_err = detrend_order_rvs(times, rvs_all_orders, rvs_all_orders_err, no_of_orders, trend_combined_orders, trend_combined_orders_err)
 
-    residual_scatter_lr = []
+        residual_scatter_lr = []
 
-    for order in range(no_of_orders):
-        rvs_planet_c_removed_order = rvs_all_orders[order,:] - planet_c_signal
-        residual_scatter_order = np.std(rvs_planet_c_removed_order)
-        residual_scatter_lr.append(residual_scatter_order)
+        for order in range(no_of_orders):
+            rvs_planet_c_removed_order = rvs_all_orders[order,:] - planet_c_signal
+            residual_scatter_order = np.std(rvs_planet_c_removed_order)
+            residual_scatter_lr.append(residual_scatter_order)
 
-    residual_scatter_lr = np.array(residual_scatter_lr)
-    plt.plot(range(no_of_orders), residual_scatter_lr, label = str(lr))
+        residual_scatter_lr = np.array(residual_scatter_lr)
+        plt.plot(range(no_of_orders), residual_scatter_lr, label = 'rvlr = {}, telr = {}'.format(rv_lr, te_lr)
 
 plt.legend()
+plt.savefig('/home/ajolly/projects/wobble_precision/plots/plot_{}_{}.png'.format(rv_lr, te_lr))
 
 # %%
